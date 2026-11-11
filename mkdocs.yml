@@ -1,5 +1,5 @@
-site_name: "大模型后训练笔记"
-site_description: "按公开技术报告重写的 LLM Post-Training 笔记：算法、工业流水线与趋势"
+site_name: "LLM Post-Training 与 Agentic RL 研究"
+site_description: "系统梳理大语言模型后训练与 Agentic RL 的算法原理、工业实践与前沿方向"
 site_author: "JunKun Qiu"
 site_url: https://QJK-BUAA.github.io/llm-post-training/
 
@@ -40,40 +40,57 @@ theme:
     - search.suggest
     - search.highlight
     - content.code.copy
+    - content.code.annotate
     - toc.follow
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/QJK-BUAA/llm-post-training
 
 nav:
   - 首页: index.md
-  - 后训练笔记:
+  - Post-Training 技术报告:
       - 概述: post-training/index.md
       - 1. 算法基础:
-          - 1.1 训练全景: post-training/ch1/1.1-training-landscape.md
-          - 1.2 RLHF 与 RLVR: post-training/ch1/1.2-rlhf-rlvr.md
-          - 1.3 DPO: post-training/ch1/1.3-dpo.md
-          - 1.4 PPO: post-training/ch1/1.4-ppo.md
-          - 1.5 GRPO: post-training/ch1/1.5-grpo.md
-          - 1.6 DAPO: post-training/ch1/1.6-dapo.md
-          - 1.7 VAPO: post-training/ch1/1.7-vapo.md
-          - 1.8 CISPO: post-training/ch1/1.8-cispo.md
-          - 1.9 GSPO: post-training/ch1/1.9-gspo.md
-          - 1.10 SAPO: post-training/ch1/1.10-sapo.md
-          - 1.11 公式速查: post-training/ch1/1.11-cheatsheet.md
-          - 1.12 演进逻辑: post-training/ch1/1.12-evolution.md
-      - 2. 技术报告:
+          - 1.1 大模型训练全景: post-training/ch1/1.1-training-landscape.md
+          - 1.2 RLHF 与 RLVR 两大范式: post-training/ch1/1.2-rlhf-rlvr.md
+          - 1.3 DPO — 离线偏好优化: post-training/ch1/1.3-dpo.md
+          - 1.4 PPO — 经典策略优化: post-training/ch1/1.4-ppo.md
+          - 1.5 GRPO — RLVR 奠基算法: post-training/ch1/1.5-grpo.md
+          - 1.6 DAPO — 工业级优化: post-training/ch1/1.6-dapo.md
+          - 1.7 VAPO — Value 路线回归: post-training/ch1/1.7-vapo.md
+          - 1.8 CISPO — 裁剪 IS 权重: post-training/ch1/1.8-cispo.md
+          - 1.9 GSPO — 序列级策略优化: post-training/ch1/1.9-gspo.md
+          - 1.10 SAPO — 平滑软门控: post-training/ch1/1.10-sapo.md
+          - 1.11 算法公式速查表: post-training/ch1/1.11-cheatsheet.md
+          - 1.12 演进逻辑总结: post-training/ch1/1.12-evolution.md
+      - 2. 技术报告深度解读:
           - 2.1 DeepSeek: post-training/ch2/2.1-deepseek.md
           - 2.2 Kimi: post-training/ch2/2.2-kimi.md
           - 2.3 Qwen: post-training/ch2/2.3-qwen.md
           - 2.4 MiniMax: post-training/ch2/2.4-minimax.md
           - 2.5 GLM-5: post-training/ch2/2.5-glm.md
           - 2.6 Seed: post-training/ch2/2.6-seed.md
-          - 2.7 闭源模型: post-training/ch2/2.7-closed-source.md
-          - 2.8 跨模型经验: post-training/ch2/2.8-cross-model.md
-          - 2.9 数据工程: post-training/ch2/2.9-data-engineering.md
-          - 2.10 Agentic 能力如何训出: post-training/ch2/2.10-agentic-training.md
-      - 3. 趋势:
-          - 3.1 范式变迁: post-training/ch3/3.1-timeline-paradigms.md
-          - 3.2 共识与挑战: post-training/ch3/3.2-challenges-future.md
-          - 3.3 个人判断: post-training/ch3/3.3-opinions.md
+          - 2.7 闭源模型概览: post-training/ch2/2.7-closed-source.md
+          - 2.8 跨模型训练经验: post-training/ch2/2.8-cross-model.md
+          - 2.9 数据工程专题: post-training/ch2/2.9-data-engineering.md
+          - 2.10 基座的 Agentic 能力是怎么训出来的: post-training/ch2/2.10-agentic-training.md
+      - 3. 演进路线与趋势展望:
+          - 3.1 技术演进与范式变迁: post-training/ch3/3.1-timeline-paradigms.md
+          - 3.2 行业共识与核心挑战: post-training/ch3/3.2-challenges-future.md
+          - 3.3 个人分析与思考: post-training/ch3/3.3-opinions.md
+  - Agentic RL 调研报告:
+      - 概述: agentic-rl/index.md
+      - 1. 算法与核心挑战:
+          - 1.1 从推理 RL 到 Agentic RL: agentic-rl/ch1/1.1-overview.md
+          - 1.2 奖励信号与训练稳定性: agentic-rl/ch1/1.2-reward-stability.md
+          - 1.3 探索效率与信用分配: agentic-rl/ch1/1.3-exploration-credit.md
+          - 1.4 工程实践: agentic-rl/ch1/1.4-engineering.md
+          - 1.5 算法速查与路线图: agentic-rl/ch1/1.5-algorithm-summary.md
+      - 2. 全景分析与展望:
+          - 2.1 领域全景与技术路线: agentic-rl/ch2/2.1-landscape.md
+          - 2.2 核心判断与未来预测: agentic-rl/ch2/2.2-outlook.md
 
 markdown_extensions:
   - admonition
@@ -86,16 +103,25 @@ markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
   - pymdownx.inlinehilite
+  - pymdownx.snippets
   - pymdownx.tabbed:
       alternate_style: true
   - pymdownx.arithmatex:
       generic: true
   - toc:
       permalink: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
   - attr_list
   - md_in_html
   - tables
   - footnotes
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
 
 extra_javascript:
   - javascripts/mermaid.mjs
@@ -107,5 +133,6 @@ extra_css:
 
 plugins:
   - search
+  - tags
 
-copyright: 内容依据公开论文与 <a href="https://github.com/XavierZhang2002/agentic-rl-analysis">agentic-rl-analysis</a> 重写
+copyright: 基于公开论文与 <a href="https://github.com/XavierZhang2002/agentic-rl-analysis">agentic-rl-analysis</a> 修订重构

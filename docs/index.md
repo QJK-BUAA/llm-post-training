@@ -1,14 +1,74 @@
-# 大模型后训练笔记
+---
+title: LLM Post-Training 与 Agentic RL 研究
+description: 系统梳理大语言模型后训练与 Agentic RL 的算法原理、工业实践与前沿方向
+hide:
+  - navigation
+tags:
+  - 首页
+  - Post-Training
+  - Agentic RL
+---
 
-<p class="byline">重写自 <a href="https://github.com/XavierZhang2002/agentic-rl-analysis">zhenliang / agentic-rl-analysis</a> 的后训练报告，并按公开论文核对了公式与数字。</p>
+# LLM Post-Training 与 Agentic RL 研究
 
-这份笔记回答三件事：后训练在整条训练流程里做什么，PPO 之后的算法各自改了目标函数的哪一项，以及 DeepSeek、Kimi、Qwen、MiniMax、GLM、Seed 实际怎么把这些算法跑起来。
+<p class="byline">基于 50+ 篇前沿论文与 12+ 模型技术报告 · 补齐前置推导并与一手文献逐项对齐</p>
 
-阅读顺序：
+---
 
-- 先建立对象：[1.1 训练全景](post-training/ch1/1.1-training-landscape.md) 和 [1.2 两大范式](post-training/ch1/1.2-rlhf-rlvr.md)。1.2 固定了后文所有符号。
-- 算法按依赖往下读：DPO 和 PPO 可以并列看，GRPO 依赖 PPO 的裁剪，DAPO、CISPO、GSPO、SAPO 都在改 GRPO 的比率，VAPO 把价值网络加回来。
-- 工业章节只讲流水线、数据和工程，不再改写算法定义。算法以第 1 章为准。
-- 第 3 章的个人判断沿用原综述的问题意识。前提已被论文改写的地方，正文会直接写成核对后的版本。
+<div class="grid cards" markdown>
 
-本地常用的两个指标先记在这里。**AIME** 是美国数学邀请赛，后训练论文多用它看竞赛数学。**avg@k** 是同一题采样 k 次的平均准确率；**pass@k** 是 k 次里至少对一次的比例。pass@k 通常高于 avg@k，不能把它当成平均分。
+-   :material-flask:{ .lg .middle } **Post-Training 技术报告**
+
+    ---
+
+    从 DPO、PPO 到 GRPO、DAPO、VAPO、CISPO、GSPO、SAPO 的算法演进，DeepSeek / Kimi / Qwen / MiniMax / GLM-5 / Seed 等主流模型的训练实践，以及行业共识与深度思考。
+
+    - 全局符号体系与 8 种核心算法的完整推导
+    - 6 大模型系列的 Post-Training 深度拆解与数据工程全景
+    - 6 大行业共识 · 5 大核心挑战 · 9 条判断与推论
+
+    [:octicons-arrow-right-24: 开始阅读](./post-training/index.md){ .md-button }
+
+-   :material-robot:{ .lg .middle } **Agentic RL 调研报告**
+
+    ---
+
+    多轮交互、工具调用与长程规划场景下的强化学习算法设计，基于 47 篇代表性论文的系统性分析。
+
+    - 奖励信号、训练稳定性、探索效率、信用分配四大挑战
+    - GLM-5 / Kimi K2 的工业级 Agentic 训练基础设施
+    - 三条技术路线对比 · 产业观察 · 短中长期趋势预测
+
+    [:octicons-arrow-right-24: 开始阅读](./agentic-rl/index.md){ .md-button }
+
+</div>
+
+---
+
+<div class="grid cards" markdown>
+
+-   :material-target: **快速入门**
+
+    ---
+
+    [:octicons-arrow-right-24: 训练全景与两大范式](./post-training/ch1/1.1-training-landscape.md)
+
+    [:octicons-arrow-right-24: 技术演进时间线](./post-training/ch3/3.1-timeline-paradigms.md)
+
+-   :material-chart-bar: **深入算法**
+
+    ---
+
+    [:octicons-arrow-right-24: PPO → SAPO 策略优化全脉络](./post-training/ch1/1.4-ppo.md)
+
+    [:octicons-arrow-right-24: Agentic RL 核心挑战与算法](./agentic-rl/ch1/1.1-overview.md)
+
+-   :material-office-building: **工业实践**
+
+    ---
+
+    [:octicons-arrow-right-24: 跨模型训练经验与数据工程](./post-training/ch2/2.8-cross-model.md)
+
+    [:octicons-arrow-right-24: 行业共识与核心挑战](./post-training/ch3/3.2-challenges-future.md)
+
+</div>
