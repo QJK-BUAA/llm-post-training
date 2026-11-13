@@ -61,7 +61,7 @@ tags:
 
     [:octicons-arrow-right-24: PPO → SAPO 策略优化全脉络](./post-training/ch1/1.4-ppo.md)
 
-    [:octicons-arrow-right-24: Agentic RL 核心挑战与算法](./agentic-rl/ch1/1.1-overview.md)
+    [:octicons-arrow-right-24: Agentic RL 核心挑战与算法](./agentic-rl/ch1/1.1-pomdp-trajectory.md)
 
 -   :material-office-building: **工业实践**
 

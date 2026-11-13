@@ -82,15 +82,26 @@ nav:
           - 3.3 个人分析与思考: post-training/ch3/3.3-opinions.md
   - Agentic RL 调研报告:
       - 概述: agentic-rl/index.md
-      - 1. 算法与核心挑战:
-          - 1.1 从推理 RL 到 Agentic RL: agentic-rl/ch1/1.1-overview.md
-          - 1.2 奖励信号与训练稳定性: agentic-rl/ch1/1.2-reward-stability.md
-          - 1.3 探索效率与信用分配: agentic-rl/ch1/1.3-exploration-credit.md
-          - 1.4 工程实践: agentic-rl/ch1/1.4-engineering.md
-          - 1.5 算法速查与路线图: agentic-rl/ch1/1.5-algorithm-summary.md
-      - 2. 全景分析与展望:
-          - 2.1 领域全景与技术路线: agentic-rl/ch2/2.1-landscape.md
-          - 2.2 核心判断与未来预测: agentic-rl/ch2/2.2-outlook.md
+      - 1. 数学底座与四大算法挑战:
+          - 1.1 一眼看懂多轮交互闭环: agentic-rl/ch1/1.1-pomdp-trajectory.md
+          - 1.2 单轮 GRPO 为什么会翻车: agentic-rl/ch1/1.2-single-turn-failure.md
+          - 1.3 中间几十步没分怎么教: agentic-rl/ch1/1.3-reward-design.md
+          - 1.4 赢了算哪一步的功劳: agentic-rl/ch1/1.4-credit-assignment.md
+          - 1.5 一上来全错怎么破冰: agentic-rl/ch1/1.5-exploration-memory.md
+          - 1.6 多轮异步训练怎么防崩盘: agentic-rl/ch1/1.6-stability-convergence.md
+      - 2. 五大垂直场景:
+          - 2.1 搜索与深度调研: agentic-rl/ch2/2.1-search-research.md
+          - 2.2 代码、SWE 与终端: agentic-rl/ch2/2.2-code-swe-terminal.md
+          - 2.3 网页与 GUI 电脑操控: agentic-rl/ch2/2.3-web-gui-computer.md
+          - 2.4 记忆即动作: agentic-rl/ch2/2.4-memory-context.md
+          - 2.5 多智能体协同: agentic-rl/ch2/2.5-multi-agent.md
+      - 3. 基础设施、环境与评测:
+          - 3.1 开源训练框架对比: agentic-rl/ch3/3.1-frameworks.md
+          - 3.2 环境合成与防作弊: agentic-rl/ch3/3.2-environments-anticheat.md
+          - 3.3 评测基准全景: agentic-rl/ch3/3.3-benchmarks.md
+      - 4. 全景速查与落地:
+          - 4.1 全景速查与演进脉络: agentic-rl/ch4/4.1-cheatsheet-timeline.md
+          - 4.2 落地决策树与未来: agentic-rl/ch4/4.2-decisions-outlook.md
 
 markdown_extensions:
   - admonition
