@@ -1,0 +1,2950 @@
+
+<!doctype html>
+<html lang="zh" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="深度解读 Kimi 系列（K1.5、K2、K2.5）从 128K 长上下文推理与 long2short，到 MuonClip 与 MCP Agentic 合成，再到多模态 PARL 协作的技术演进。">
+      
+      
+        <meta name="author" content="JunKun Qiu">
+      
+      
+        <link rel="canonical" href="https://QJK-BUAA.github.io/llm-post-training/post-training/ch2/2.2-kimi/">
+      
+      
+        <link rel="prev" href="../2.1-deepseek/">
+      
+      
+        <link rel="next" href="../2.3-qwen/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.1">
+    
+    
+      
+        <title>2.2 Kimi — 从长上下文推理 Scaling 到多模态 Agent Swarm - LLM Post-Training 与 Agentic RL 研究</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Noto+Sans+SC:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Noto Sans SC";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#22-kimi--从长上下文推理-scaling-到多模态-agent-swarm" class="md-skip">
+          跳转至
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="页眉">
+    <a href="../../.." title="LLM Post-Training 与 Agentic RL 研究" class="md-header__button md-logo" aria-label="LLM Post-Training 与 Agentic RL 研究" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            LLM Post-Training 与 Agentic RL 研究
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              2.2 Kimi — 从长上下文推理 Scaling 到多模态 Agent Swarm
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="切换到暗色模式"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="切换到暗色模式" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="切换到亮色模式"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="切换到亮色模式" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="搜索" placeholder="搜索" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="查找">
+        
+        <button type="reset" class="md-search__icon md-icon" title="清空当前内容" aria-label="清空当前内容" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            正在初始化搜索引擎
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/QJK-BUAA/llm-post-training" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    llm-post-training
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="标签" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  首页
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../../" class="md-tabs__link">
+          
+  
+  
+  Post-Training 技术报告
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../agentic-rl/" class="md-tabs__link">
+          
+  
+  
+  Agentic RL 调研报告
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="导航栏" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="LLM Post-Training 与 Agentic RL 研究" class="md-nav__button md-logo" aria-label="LLM Post-Training 与 Agentic RL 研究" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    LLM Post-Training 与 Agentic RL 研究
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/QJK-BUAA/llm-post-training" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    llm-post-training
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    首页
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Post-Training 技术报告
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Post-Training 技术报告
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概述
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_2" id="__nav_2_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1. 算法基础
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    1. 算法基础
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ch1/1.1-training-landscape/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1.1 大模型训练全景
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ch1/1.2-rlhf-rlvr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1.2 RLHF 与 RLVR 两大范式
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ch1/1.3-dpo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1.3 DPO — 离线偏好优化
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ch1/1.4-ppo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1.4 PPO — 经典策略优化
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ch1/1.5-grpo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1.5 GRPO — RLVR 奠基算法
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ch1/1.6-dapo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1.6 DAPO — 工业级优化
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ch1/1.7-vapo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1.7 VAPO — Value 路线回归
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ch1/1.8-cispo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1.8 CISPO — 裁剪 IS 权重
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ch1/1.9-gspo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1.9 GSPO — 序列级策略优化
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ch1/1.10-sapo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1.10 SAPO — 平滑软门控
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ch1/1.11-cheatsheet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1.11 算法公式速查表
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ch1/1.12-evolution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1.12 演进逻辑总结
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2_3" id="__nav_2_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2. 技术报告深度解读
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    2. 技术报告深度解读
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../2.1-deepseek/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2.1 DeepSeek
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2.2 Kimi
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2.2 Kimi
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="目录">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目录
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#kimi-k15--长上下文推理-scaling-与-long2short" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Kimi k1.5 — 长上下文推理 Scaling 与 Long2Short
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Kimi k1.5 — 长上下文推理 Scaling 与 Long2Short">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#核心动机与算法选择online-policy-mirror-descent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        核心动机与算法选择（Online Policy Mirror Descent）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#128k-长上下文-rl-系统与-partial-rollout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        128K 长上下文 RL 系统与 Partial Rollout
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#kimi-k2--万亿-moemuonclip-与大规模-agentic-合成" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Kimi K2 — 万亿 MoE、MuonClip 与大规模 Agentic 合成
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Kimi K2 — 万亿 MoE、MuonClip 与大规模 Agentic 合成">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#muonclip-优化器根治大规模-moe-注意力-logits-爆炸" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MuonClip 优化器：根治大规模 MoE 注意力 Logits 爆炸
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#三阶段大规模-agentic-数据合成流水线" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        三阶段大规模 Agentic 数据合成流水线
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#self-critique-rubric-rewards闭环自评量表奖励" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Self-Critique Rubric Rewards（闭环自评量表奖励）
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#kimi-k25--原生多模态与并行-agent-swarmparl" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Kimi K2.5 — 原生多模态与并行 Agent Swarm（PARL）
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Kimi K2.5 — 原生多模态与并行 Agent Swarm（PARL）">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#三个颠覆常规直觉的多模态后训练发现" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        三个颠覆常规直觉的多模态后训练发现
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent-swarm-与-parl并行多智能体编排强化学习" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent Swarm 与 PARL（并行多智能体编排强化学习）
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#kimi-系列演进对比" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Kimi 系列演进对比
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../2.3-qwen/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2.3 Qwen
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../2.4-minimax/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2.4 MiniMax
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../2.5-glm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2.5 GLM-5
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../2.6-seed/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2.6 Seed
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../2.7-closed-source/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2.7 闭源模型概览
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../2.8-cross-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2.8 跨模型训练经验
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../2.9-data-engineering/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2.9 数据工程专题
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../2.10-agentic-training/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2.10 基座的 Agentic 能力是怎么训出来的
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_4" id="__nav_2_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3. 演进路线与趋势展望
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    3. 演进路线与趋势展望
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ch3/3.1-timeline-paradigms/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3.1 技术演进与范式变迁
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ch3/3.2-challenges-future/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3.2 行业共识与核心挑战
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ch3/3.3-opinions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3.3 个人分析与思考
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agentic RL 调研报告
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Agentic RL 调研报告
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../agentic-rl/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概述
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_2" id="__nav_3_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1. 数学底座与四大算法挑战
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    1. 数学底座与四大算法挑战
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../agentic-rl/ch1/1.1-pomdp-trajectory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1.1 一眼看懂多轮交互闭环
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../agentic-rl/ch1/1.2-single-turn-failure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1.2 单轮 GRPO 为什么会翻车
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../agentic-rl/ch1/1.3-reward-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1.3 中间几十步没分怎么教
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../agentic-rl/ch1/1.4-credit-assignment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1.4 赢了算哪一步的功劳
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../agentic-rl/ch1/1.5-exploration-memory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1.5 一上来全错怎么破冰
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../agentic-rl/ch1/1.6-stability-convergence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1.6 多轮异步训练怎么防崩盘
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_3" id="__nav_3_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2. 五大垂直场景
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    2. 五大垂直场景
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../agentic-rl/ch2/2.1-search-research/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2.1 搜索与深度调研
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../agentic-rl/ch2/2.2-code-swe-terminal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2.2 代码、SWE 与终端
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../agentic-rl/ch2/2.3-web-gui-computer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2.3 网页与 GUI 电脑操控
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../agentic-rl/ch2/2.4-memory-context/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2.4 记忆即动作
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../agentic-rl/ch2/2.5-multi-agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2.5 多智能体协同
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_4" id="__nav_3_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3. 基础设施、环境与评测
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    3. 基础设施、环境与评测
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../agentic-rl/ch3/3.1-frameworks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3.1 开源训练框架对比
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../agentic-rl/ch3/3.2-environments-anticheat/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3.2 环境合成与防作弊
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../agentic-rl/ch3/3.3-benchmarks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3.3 评测基准全景
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_5" id="__nav_3_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4. 全景速查与落地
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    4. 全景速查与落地
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../agentic-rl/ch4/4.1-cheatsheet-timeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4.1 全景速查与演进脉络
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../agentic-rl/ch4/4.2-decisions-outlook/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4.2 落地决策树与未来
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="目录">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目录
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#kimi-k15--长上下文推理-scaling-与-long2short" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Kimi k1.5 — 长上下文推理 Scaling 与 Long2Short
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Kimi k1.5 — 长上下文推理 Scaling 与 Long2Short">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#核心动机与算法选择online-policy-mirror-descent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        核心动机与算法选择（Online Policy Mirror Descent）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#128k-长上下文-rl-系统与-partial-rollout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        128K 长上下文 RL 系统与 Partial Rollout
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#kimi-k2--万亿-moemuonclip-与大规模-agentic-合成" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Kimi K2 — 万亿 MoE、MuonClip 与大规模 Agentic 合成
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Kimi K2 — 万亿 MoE、MuonClip 与大规模 Agentic 合成">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#muonclip-优化器根治大规模-moe-注意力-logits-爆炸" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MuonClip 优化器：根治大规模 MoE 注意力 Logits 爆炸
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#三阶段大规模-agentic-数据合成流水线" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        三阶段大规模 Agentic 数据合成流水线
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#self-critique-rubric-rewards闭环自评量表奖励" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Self-Critique Rubric Rewards（闭环自评量表奖励）
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#kimi-k25--原生多模态与并行-agent-swarmparl" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Kimi K2.5 — 原生多模态与并行 Agent Swarm（PARL）
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Kimi K2.5 — 原生多模态与并行 Agent Swarm（PARL）">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#三个颠覆常规直觉的多模态后训练发现" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        三个颠覆常规直觉的多模态后训练发现
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent-swarm-与-parl并行多智能体编排强化学习" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent Swarm 与 PARL（并行多智能体编排强化学习）
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#kimi-系列演进对比" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Kimi 系列演进对比
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+
+
+  
+
+
+  <nav class="md-path" aria-label="导航栏" >
+    <ol class="md-path__list">
+      
+        
+  
+  
+    <li class="md-path__item">
+      <a href="../../.." class="md-path__link">
+        
+  <span class="md-ellipsis">
+    首页
+  </span>
+
+      </a>
+    </li>
+  
+
+      
+      
+        
+  
+  
+    
+    
+      <li class="md-path__item">
+        <a href="../../" class="md-path__link">
+          
+  <span class="md-ellipsis">
+    Post-Training 技术报告
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+    
+    
+      <li class="md-path__item">
+        <a href="../2.1-deepseek/" class="md-path__link">
+          
+  <span class="md-ellipsis">
+    2. 技术报告深度解读
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ol>
+  </nav>
+
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  <nav class="md-tags" >
+    
+      
+      
+      
+      
+        <span class="md-tag">K1.5</span>
+      
+    
+      
+      
+      
+      
+        <span class="md-tag">K2</span>
+      
+    
+      
+      
+      
+      
+        <span class="md-tag">K2.5</span>
+      
+    
+      
+      
+      
+      
+        <span class="md-tag">Kimi</span>
+      
+    
+  </nav>
+
+
+  
+  
+
+
+<h1 id="22-kimi--从长上下文推理-scaling-到多模态-agent-swarm">2.2 Kimi — 从长上下文推理 Scaling 到多模态 Agent Swarm<a class="headerlink" href="#22-kimi--从长上下文推理-scaling-到多模态-agent-swarm" title="Permanent link">&para;</a></h1>
+<div class="admonition abstract">
+<p class="admonition-title">本节摘要</p>
+<p>Kimi 系列清晰展现了后训练从单轮长推理走向复杂多模态智能体的三步跨越：<strong>K1.5</strong> 将在线 RL 上下文扩展至 128K，提出 Partial Rollout、CoT RM 与 <code>long2short</code> 长度压缩；<strong>K2</strong> 在 1.04T MoE 上引入保证零 Loss Spike 的 <strong>MuonClip</strong> 优化器，构建基于 3K+ 真实 MCP 工具与世界模拟器的 Agentic 合成与自评 Rubric 体系；<strong>K2.5</strong> 进一步训练多模态并行编排器（<strong>PARL / Agent Swarm</strong>），并发现了早期低比例视觉融合与“视觉 RL 反向增益纯文本推理”的跨模态迁移规律。</p>
+</div>
+<div class="admonition abstract">
+<p class="admonition-title">核心报告来源</p>
+<ul>
+<li><strong>Kimi k1.5</strong>: <em>Kimi k1.5: Scaling Reinforcement Learning with LLMs</em>, <a href="https://arxiv.org/abs/2501.12599">arXiv:2501.12599</a> (2025.01)</li>
+<li><strong>Kimi K2</strong>: <em>Kimi K2: Open Agentic Intelligence</em>, <a href="https://arxiv.org/abs/2507.20534">arXiv:2507.20534</a> (2025.07)</li>
+<li><strong>Kimi K2.5</strong>: <em>Kimi K2.5 Technical Report</em>, <a href="https://arxiv.org/abs/2602.02276">arXiv:2602.02276</a> (2026.02)</li>
+</ul>
+</div>
+<hr />
+<h2 id="kimi-k15--长上下文推理-scaling-与-long2short">Kimi k1.5 — 长上下文推理 Scaling 与 Long2Short<a class="headerlink" href="#kimi-k15--长上下文推理-scaling-与-long2short" title="Permanent link">&para;</a></h2>
+<h3 id="核心动机与算法选择online-policy-mirror-descent">核心动机与算法选择（Online Policy Mirror Descent）<a class="headerlink" href="#核心动机与算法选择online-policy-mirror-descent" title="Permanent link">&para;</a></h3>
+<p>与 DeepSeek-R1 同月发布的 Kimi k1.5 提出了高度一致的核心论断：<strong>把强化学习的上下文窗口拉长（Scaling Context Length），本身就是解锁测试时推理扩展的关键维度</strong>，无需依赖复杂的 MCTS 树搜索、价值网络或过程奖励模型（PRM）。</p>
+<p>在优化器选择上，k1.5 没有沿用 PPO 或 GRPO，而是从带相对熵（KL）正则的 <strong>Online Policy Mirror Descent（在线策略镜像下降）</strong> 出发推导出无 Critic 的策略梯度更新：</p>
+<ul>
+<li><strong>显式弃用 Value 网络</strong>：团队指出，长思维链中许多看似“走弯路报错再撤回”的中间步骤对探索至关重要，用不准确的局部 Value 函数强行做步级信用分配反而会掐灭有益的回溯尝试；</li>
+<li><strong>组均值基线 + 平方正则项</strong>：对同一问题采样多条回答，用二元结果奖励 <span class="arithmatex">\(r \in \{0, 1\}\)</span> 减去同问题组平均奖励作为优势，同时配合对数概率比惩罚约束步长，并在每轮大迭代重置优化器状态。</li>
+</ul>
+<div class="admonition success">
+<p class="admonition-title">关键发现 1：Chain-of-Thought Reward Model（先思考再判分的 RM）</p>
+<p>对于无法用简单字符串比对判分的复杂科学或开放推理题，k1.5 训练了 <strong>CoT RM</strong>——要求判分模型在给出 0/1 评判前先生成一段逐步核查的推理过程。对比测试显示：<strong>CoT RM 的判别准确率高达 98.5%，而直接吐标量分数的传统 RM 准确率仅为 84.4%</strong>。</p>
+</div>
+<h3 id="128k-长上下文-rl-系统与-partial-rollout">128K 长上下文 RL 系统与 Partial Rollout<a class="headerlink" href="#128k-长上下文-rl-系统与-partial-rollout" title="Permanent link">&para;</a></h3>
+<figure>
+  <img alt="Kimi k1.5 大规模 RL 训练系统架构" src="../../../images/post-training/kimi-k15-system-overview.png" width="72%" />
+<br />
+<figcaption>Kimi k1.5 RL 训练系统架构：Rollout Workers 采样、领域验证/RM 评分、Master 统一调度、Trainer Workers（Policy + Reference）更新参数，借助 Replay Buffer 实现跨轮次 Partial Rollout（图源：arXiv:2501.12599 Figure 3a）</figcaption>
+</figure>
+<p>k1.5 采用渐进式窗口课程（<strong>4K → 32K → 128K</strong>）做 RL 训练。为了防止少数长达数万 token 的慢轨迹拖垮整批 GPU 利用率（木桶效应），团队设计了核心系统机制 <strong>Partial Rollout（分段续写采样）</strong>：</p>
+<ul>
+<li>为每轮采样设定固定的最大 token 预算；</li>
+<li>若某条长轨迹在本轮预算耗尽时仍未写完，不将其丢弃或强判错误，而是把当前已生成的前缀存入 <strong>Replay Buffer</strong>，在下一轮迭代中由新策略接着往后续写完成。</li>
+</ul>
+<figure>
+  <img alt="Partial Rollout 机制" src="../../../images/post-training/kimi-k15-partial-rollout.png" width="68%" />
+<br />
+<figcaption>Partial Rollout 轨迹状态示意：区分正常终止（圆点）、触及单轮长度上限待续写（菱形）与陷入死循环复读提前熔断（叉号）（图源：arXiv:2501.12599 Figure 3b）</figcaption>
+</figure>
+<p>同时配合两级题目采样调度與混合部署基础设施：</p>
+<ul>
+<li><strong>课程采样 + 优先采样（Curriculum &amp; Prioritized Sampling）</strong>：先从简单题起步稳定格式，随后实时跟踪模型在每道题上的平均成功率 <span class="arithmatex">\(s\)</span>，按正比于 <span class="arithmatex">\((1 - s)\)</span> 的权重抽题，把算力聚焦在尚未攻克的能力边界上；</li>
+<li><strong>训推共置与极速沙箱</strong>：Megatron（训练）与 vLLM（推理）以 Kubernetes Sidecar 共置在同一批 GPU 上（推理切训练 ~10 秒，训练切推理 &lt;1 分钟）；代码评测容器用轻量级 <code>crun</code> 替代 Docker，启动耗时从 0.12s 压至 0.04s，吞吐从 27 容器/秒提升至 120 容器/秒。</li>
+</ul>
+<div class="admonition success">
+<p class="admonition-title">关键发现 2：Long2Short（将长链推理能力压缩回短思维模型）</p>
+<p>长思维模型虽然强，但日常简单问答耗费上万 token 太慢太贵。k1.5 系统对比了 4 种将 <code>long-CoT</code> 能力迁移给 <code>short-CoT</code> 模型的方案：</p>
+<table>
+<thead>
+<tr>
+<th>压缩迁移方法</th>
+<th>具体操作</th>
+<th>压缩效率与准确率综合表现</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Model Merging（权重合并）</strong></td>
+<td>直接对长 CoT 模型与短 CoT 模型的参数权重做加权平均</td>
+<td>中等（零训练成本，但长度控制不够精细）</td>
+</tr>
+<tr>
+<td><strong>Shortest Rejection Sampling</strong></td>
+<td>对同题采样 <span class="arithmatex">\(n=8\)</span> 次，挑出<strong>正确回答中最短的那一条</strong>做 SFT</td>
+<td>中等</td>
+</tr>
+<tr>
+<td><strong>DPO 长度偏好学习</strong></td>
+<td>以最短正确解为正例 <span class="arithmatex">\(y_w\)</span>，长度超过其 <span class="arithmatex">\(1.5\times\)</span> 的长解为负例 <span class="arithmatex">\(y_l\)</span></td>
+<td>中高</td>
+</tr>
+<tr>
+<td><strong>Long2Short RL（长度惩罚在线 RL）</strong></td>
+<td>在组内正确的前提下，对短于平均长度的回答给额外正奖励、过长回答给负惩罚，并收紧最大生成上限</td>
+<td><strong>最优</strong>（<code>k1.5-short</code> 仅耗平均 <strong>3,272 tokens</strong> 即在 AIME 2024 达 <strong>60.8%</strong>）</td>
+</tr>
+</tbody>
+</table>
+</div>
+<hr />
+<h2 id="kimi-k2--万亿-moemuonclip-与大规模-agentic-合成">Kimi K2 — 万亿 MoE、MuonClip 与大规模 Agentic 合成<a class="headerlink" href="#kimi-k2--万亿-moemuonclip-与大规模-agentic-合成" title="Permanent link">&para;</a></h2>
+<p>K2 将主战场从单轮数学编程推向<strong>开放工具生态下的多步智能体（Agentic Intelligence）</strong>。模型采用 <strong>1.04T 总参数 / 32.6B 激活参数</strong> 的稀疏 MoE 架构（共 384 个专家，每 token 激活 8 个），注意力沿用 MLA 并将注意力头数从 DeepSeek-V3 的 128 精简为 64（在 128K 长上下文推理时节省高达 <strong>83% 注意力 FLOPs</strong>，而预训练损失差异仅 0.5%–1.2%）。</p>
+<h3 id="muonclip-优化器根治大规模-moe-注意力-logits-爆炸">MuonClip 优化器：根治大规模 MoE 注意力 Logits 爆炸<a class="headerlink" href="#muonclip-优化器根治大规模-moe-注意力-logits-爆炸" title="Permanent link">&para;</a></h3>
+<details class="info">
+<summary>📖 初学者补充：什么是 Muon 优化器，为什么会引发注意力爆炸，QK-Clip 怎么修的？</summary>
+<ol>
+<li><strong>Muon 优化器为什么比 AdamW 更省数据？</strong>
+    传统 AdamW 按元素缩放梯度，参数更新矩阵往往集中在少数几个大奇异值主方向上（低效秩）。<strong>Muon</strong> 优化器对动量矩阵施加 Newton-Schulz 正交化迭代（记作 <code>msign</code>），把更新矩阵的所有奇异值拉平为近似相等（“满秩均匀推进”），在同等 token 预算下能学到更丰富的特征。</li>
+<li><strong>为什么放到万亿 MoE 上会炸？</strong>
+    自注意力分数由双线性乘积 <span class="arithmatex">\(Q K^\top = (X W_Q)(X W_K)^\top\)</span> 决定。Muon 的满秩强更新在 MoE 稀疏路由叠加下，容易让查询投影权重 <span class="arithmatex">\(W_Q\)</span> 和键投影权重 <span class="arithmatex">\(W_K\)</span> 的最大奇异向量对齐并累加增长，导致某几个注意力头的内积分数突破上百甚至上千（Attention Logits Explosion），Softmax 瞬间饱和溢出引发训练崩溃。</li>
+<li><strong>QK-Clip 的无损“后更新裁剪”</strong>：
+    K2 不去阉割 Muon 优化器本身的更新公式，而是在<strong>每一步参数更新完成后</strong>，逐个检查每个注意力头 <span class="arithmatex">\(h\)</span> 的最大注意力 logit 尺度 <span class="arithmatex">\(S_{\max}^h\)</span>。一旦某头超过安全阈值 <span class="arithmatex">\(\tau = 100\)</span>，立即按缩放因子 <span class="arithmatex">\(\gamma_h = \min(1, \tau / S_{\max}^h)\)</span> 对该头的 <span class="arithmatex">\(W_Q^h, W_K^h\)</span> 做等比例缩小（如各乘 <span class="arithmatex">\(\sqrt{\gamma_h}\)</span>，仅对非共享 RoPE/头部分量缩放而不破坏当前步输出结构）。最奇妙的是它具备<strong>自去激活（Self-deactivating）</strong>性质：训练前约 70K 步帮助模型平稳度过剧烈期后，各头谱范数自然回落到 <span class="arithmatex">\(\tau\)</span> 以下，QK-Clip 自动不再触发，助 K2 在 <strong>15.5T tokens 全程实现零 Loss Spike</strong>！</li>
+</ol>
+</details>
+<h3 id="三阶段大规模-agentic-数据合成流水线">三阶段大规模 Agentic 数据合成流水线<a class="headerlink" href="#三阶段大规模-agentic-数据合成流水线" title="Permanent link">&para;</a></h3>
+<p>真实世界的软件与 API 工具调用很难靠人工手写轨迹，直接连真实线上接口又慢、贵且有副作用。K2 构建了经典的<strong>“工具库扩增 → 任务与量表生成 → 世界模拟器交互与评判过滤”</strong>三阶段流水线：</p>
+<figure>
+  <img alt="Kimi K2 Agentic 数据合成阶段一" src="../../../images/post-training/kimi-k2-data-synthesis-a.png" width="75%" />
+<br />
+<figcaption>Kimi K2 Agentic 数据合成阶段一：从真实 MCP（Model Context Protocol）工具库（3,000+ 真实工具）与垂直领域出发，演化合成出 20,000+ 覆盖广泛场景的工具规范，并配套生成具有不同人设的 Agent 与带评分量表（Rubrics）的复杂任务（图源：arXiv:2507.20534 Figure 8a）</figcaption>
+</figure>
+<figure>
+  <img alt="Kimi K2 轨迹生成与过滤阶段二" src="../../../images/post-training/kimi-k2-data-synthesis-b.png" width="75%" />
+<br />
+<figcaption>Kimi K2 Agentic 数据合成阶段二：User Agent 与被测 Agent 多轮对话，Tool Simulator 充当有状态的“世界模型”执行工具调用并注入可控异常，最后由 Judge Agent 对照 Rubrics 严格筛选高分轨迹（图源：arXiv:2507.20534 Figure 8b）</figcaption>
+</figure>
+<h3 id="self-critique-rubric-rewards闭环自评量表奖励">Self-Critique Rubric Rewards（闭环自评量表奖励）<a class="headerlink" href="#self-critique-rubric-rewards闭环自评量表奖励" title="Permanent link">&para;</a></h3>
+<p>对于没有唯一标准答案的主观与复杂 Agent 任务，K2 让策略模型自身兼任 Critic，对照三层结构化 <strong>Rubric（评分细则）</strong>做成对自我批评打分：</p>
+<ol>
+<li><strong>Core Rubrics（核心质量细则）</strong>：事实有据、逻辑清晰、指令切题；</li>
+<li><strong>Prescriptive Rubrics（反讨好防作弊细则）</strong>：明确禁止开头阿谀奉承（“您问得太棒了！”）、禁止空洞免责套话与显式自我辩解，直接封堵常见形式化刷分套路；</li>
+<li><strong>Human-Annotated Rubrics（场景定制细则）</strong>：针对特定专业指令挂载的人工核查项。</li>
+</ol>
+<p>更关键的是<strong>闭环 Critic 进化</strong>：在训练进程中，利用客观可验证任务（RLVR）上的最新 on-policy 采样持续更新该自评分支，把<strong>可验证领域的硬核判别力持续蒸馏迁移到主观评分能力中</strong>。配合约束解码（强制工具调用严格符合 TypeScript / JSON Schema）与 30 秒内完成 1T 参数同步的共置引擎，K2（非思考模式）在 SWE-bench Verified 取得 <strong>65.8%</strong>、LiveCodeBench v6 取得 <strong>53.7%</strong>。</p>
+<hr />
+<h2 id="kimi-k25--原生多模态与并行-agent-swarmparl">Kimi K2.5 — 原生多模态与并行 Agent Swarm（PARL）<a class="headerlink" href="#kimi-k25--原生多模态与并行-agent-swarmparl" title="Permanent link">&para;</a></h2>
+<p>K2.5 在 K2 的 1.04T MoE 基座上接入原生三维视觉编码器 <strong>MoonViT-3D</strong>，并将上下文窗口扩展至 <strong>256K（262,144 tokens）</strong>。</p>
+<details class="info">
+<summary>📖 初学者补充：MoonViT-3D 与多模态“早期融合 vs 晚期融合”是什么意思？</summary>
+<ul>
+<li><strong>视觉编码器如何喂给 LLM</strong>：图像或视频帧被切成小方块（Patch），经视觉 Transformer 编码成与词向量同维度的视觉 token，与文本 token 拼接成一条统一序列送入大语言模型主干。<strong>MoonViT-3D</strong> 同时在“高 × 宽 × 时间帧”三维块上做时空注意力，因此不仅能看单图，还能原生捕捉长视频中的连续动作变化。</li>
+<li><strong>早期融合（Early Fusion）vs 晚期融合（Late Fusion）</strong>：此处指在<strong>预训练时间轴</strong>上何时混入视觉数据——传统方案担心过早混入图像会冲淡纯文本能力，常在文本预训练快结束时才以高比例（如 50%:50%）突击注入图文数据（晚期重比例融合）；K2.5 则探索了从预训练极早期就按温和低比例（如 <strong>10% 视觉 : 90% 文本</strong>）全程伴随训练。</li>
+</ul>
+</details>
+<h3 id="三个颠覆常规直觉的多模态后训练发现">三个颠覆常规直觉的多模态后训练发现<a class="headerlink" href="#三个颠覆常规直觉的多模态后训练发现" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>早期低比例融合全面胜出</strong>：早期注入 + <code>10:90</code> 视觉文本配比，在所有多模态和纯文本基准上均优于晚期突击 + <code>50:50</code> 配比；</li>
+<li><strong>Zero-Vision SFT（零人工视觉轨迹 SFT）</strong>：SFT 阶段完全不喂人工拼凑的图文问答轨迹（图像裁剪、缩放等操作直接通过生成 IPython 代码在沙箱内编程完成）。实验甚至发现<strong>强行塞入人工设计的视觉 SFT 轨迹反而拉低了后续泛化上限</strong>——因为高质量早期联合预训练已打通跨模态表征，纯文本推理与代码能力可零样本自然泛化至视觉；</li>
+<li><strong>视觉 RL 反向提升纯文本推理（跨模态双向增益）</strong>：在多模态空间图表、视觉定位与计数任务上运行可验证 RL 后，模型在<strong>纯文本基准</strong>上的得分不降反升：</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>纯文本评测基准</th>
+<th>视觉 RL 训练前</th>
+<th>视觉 RL 训练后</th>
+<th>净增益</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>MMLU-Pro</strong></td>
+<td>84.7%</td>
+<td><strong>86.4%</strong></td>
+<td><strong>+1.7%</strong></td>
+</tr>
+<tr>
+<td><strong>GPQA-Diamond</strong></td>
+<td>84.3%</td>
+<td><strong>86.4%</strong></td>
+<td><strong>+2.1%</strong></td>
+</tr>
+<tr>
+<td><strong>LongBench v2</strong></td>
+<td>56.7%</td>
+<td><strong>58.9%</strong></td>
+<td><strong>+2.2%</strong></td>
+</tr>
+</tbody>
+</table>
+<h3 id="agent-swarm-与-parl并行多智能体编排强化学习">Agent Swarm 与 PARL（并行多智能体编排强化学习）<a class="headerlink" href="#agent-swarm-与-parl并行多智能体编排强化学习" title="Permanent link">&para;</a></h3>
+<p>面对广度信息搜集等长链任务，单 Agent 串行调用几十次搜索延迟极高且上下文很快塞满。K2.5 提出了 <strong>“可训练主编排器（Trainable Orchestrator）+ 冻结子智能体（Frozen Sub-agents）”</strong> 的并行蜂群架构：</p>
+<ul>
+<li><strong>信用分配解耦</strong>：子智能体固定采用中间阶段收敛的策略快照，其执行结果对主编排器而言等同于“外部环境观测”，RL 只集中更新负责拆解子任务、动态派生子代理并汇总结果的 Orchestrator，规避了多智能体同时更新时的信用模糊与不收敛；</li>
+<li><strong>PARL 三项奖励与退火机制</strong>：</li>
+</ul>
+<div class="arithmatex">\[
+r_{\text{PARL}}(x, y) = \lambda_1 \cdot r_{\text{parallel}} + \lambda_2 \cdot r_{\text{finish}} + r_{\text{perf}}(x, y)
+\]</div>
+<p>其中 <span class="arithmatex">\(r_{\text{parallel}}\)</span> 鼓励开启并行分支（防止偷懒退化回单线程串行），<span class="arithmatex">\(r_{\text{finish}}\)</span> 要求派出的子任务确实有效完结（防止为了刷并行分而胡乱派生空壳子代理），<span class="arithmatex">\(r_{\text{perf}}\)</span> 为最终任务质量分。训练前中期靠前两项引导学会并行分工，后期将 <span class="arithmatex">\(\lambda_1, \lambda_2 \to 0\)</span> 退火归零，使策略完全服务于终局任务表现，在广度搜索场景将端到端延迟降低了最高 <strong>4.5×</strong>。此外配合 <strong>Toggle</strong> 交替预算受限训练，使输出 token 开销节省 25%–30% 而精度几乎无损。</p>
+<hr />
+<h2 id="kimi-系列演进对比">Kimi 系列演进对比<a class="headerlink" href="#kimi-系列演进对比" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>Kimi k1.5 (2025.01)</th>
+<th>Kimi K2 (2025.07)</th>
+<th>Kimi K2.5 (2026.02)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>模型骨干与窗口</strong></td>
+<td>长链推理模型 / 128K</td>
+<td>1.04T MoE (32.6B 激活, MLA-64) / 128K</td>
+<td>同 K2 + <strong>MoonViT-3D</strong> / <strong>256K</strong></td>
+</tr>
+<tr>
+<td><strong>核心优化器 / RL</strong></td>
+<td>Online Policy Mirror Descent（无 Critic）</td>
+<td>MuonClip 预训练 + K1.5 式 RL + 预算控制</td>
+<td>同左 + <strong>PARL 并行编排 + Toggle 省流</strong></td>
+</tr>
+<tr>
+<td><strong>奖励体系</strong></td>
+<td>二元规则奖励 + <strong>CoT RM (98.5%)</strong></td>
+<td>RLVR + <strong>三层闭环 Self-Critique Rubric</strong></td>
+<td>RLVR + 生成式 RM + 跨模态视觉奖励</td>
+</tr>
+<tr>
+<td><strong>代表性方法遗产</strong></td>
+<td>Partial Rollout、Long2Short RL</td>
+<td>MuonClip (<code>QK-Clip</code>)、MCP 世界模拟器合成</td>
+<td>Zero-Vision SFT、视觉→文本正向迁移、Agent Swarm</td>
+</tr>
+<tr>
+<td><strong>权重开源状态</strong></td>
+<td>闭源</td>
+<td><strong>开源</strong></td>
+<td><strong>开源</strong></td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+  
+  
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  回到页面顶部
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="页脚" >
+        
+          
+          <a href="../2.1-deepseek/" class="md-footer__link md-footer__link--prev" aria-label="上一页: 2.1 DeepSeek">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                上一页
+              </span>
+              <div class="md-ellipsis">
+                2.1 DeepSeek
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../2.3-qwen/" class="md-footer__link md-footer__link--next" aria-label="下一页: 2.3 Qwen">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                下一页
+              </span>
+              <div class="md-ellipsis">
+                2.3 Qwen
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      基于公开论文与 <a href="https://github.com/XavierZhang2002/agentic-rl-analysis">agentic-rl-analysis</a> 修订重构
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/QJK-BUAA/llm-post-training" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "navigation.footer", "navigation.path", "navigation.instant", "navigation.instant.progress", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "toc.follow"], "search": "../../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "\u5df2\u590d\u5236", "clipboard.copy": "\u590d\u5236", "search.result.more.one": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.more.other": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 # \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.none": "\u6ca1\u6709\u627e\u5230\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.one": "\u627e\u5230 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.other": "# \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.placeholder": "\u952e\u5165\u4ee5\u5f00\u59cb\u641c\u7d22", "search.result.term.missing": "\u7f3a\u5c11", "select.version": "\u9009\u62e9\u5f53\u524d\u7248\u672c"}, "version": null}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.a5f9d56c.min.js"></script>
+      
+        <script src="../../../javascripts/mermaid.mjs" type="module"></script>
+      
+        <script src="../../../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
